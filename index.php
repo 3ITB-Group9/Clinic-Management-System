@@ -1,6 +1,20 @@
 <?php
 session_start();
 
+// Database connection
+$servername = "localhost";
+$username = "root";  // Update with your database username
+$password = "";      // Update with your database password
+$dbname = "clinicmanagement";  // Update with your database name
+
+// Create connection
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
 // Dummy authentication: Assume the user is a doctor
 $_SESSION['user_id'] = 1;  // Example user ID
 $_SESSION['role'] = 'doctor';  // Only doctors can add symptoms & records
@@ -10,15 +24,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'doctor') {
     die("Unauthorized access.");
 }
 
-// Initialize session arrays
-if (!isset($_SESSION['symptoms'])) {
-    $_SESSION['symptoms'] = [];
-}
-
-if (!isset($_SESSION['patients'])) {
-    $_SESSION['patients'] = [];
-}
-
 // Handle symptom submission
 $message = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['patient_name'], $_POST['symptoms'])) {
@@ -26,12 +31,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['patient_name'], $_POST
     $symptoms = htmlspecialchars($_POST['symptoms']);
 
     if (!empty($patient_name) && !empty($symptoms)) {
-        $_SESSION['symptoms'][] = [
-            'patient_name' => $patient_name,
-            'symptoms' => $symptoms,
-            'timestamp' => date("Y-m-d H:i:s")
-        ];
+        $stmt = $conn->prepare("INSERT INTO symptoms (patient_name, symptoms) VALUES (?, ?)");
+        $stmt->bind_param("ss", $patient_name, $symptoms);
+        $stmt->execute();
         $message = "Symptoms added successfully!";
+        $stmt->close();
     } else {
         $message = "Please fill in all fields.";
     }
@@ -46,14 +50,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['patient_id'], $_POST['
     $medications = htmlspecialchars($_POST['medications']);
 
     if (!empty($patient_id) && !empty($patient_name) && !empty($diagnosis) && !empty($treatment) && !empty($medications)) {
-        $_SESSION['patients'][] = [
-            'id' => $patient_id,
-            'name' => $patient_name,
-            'diagnosis' => $diagnosis,
-            'treatment' => $treatment,
-            'medications' => $medications
-        ];
+        $stmt = $conn->prepare("INSERT INTO users (patient_id, patient_name, diagnosis, treatment, medications) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssss", $patient_id, $patient_name, $diagnosis, $treatment, $medications);
+        $stmt->execute();
         $message = "Patient medical history added successfully!";
+        $stmt->close();
     } else {
         $message = "Please fill in all fields.";
     }
@@ -61,19 +62,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['patient_id'], $_POST['
 
 // Handle search for patient history
 $search_results = [];
-$no_results = false; // Flag to track if no results are found
+$no_results = false;
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['search_query'])) {
     $search_query = strtolower(trim($_POST['search_query']));
+    $stmt = $conn->prepare("SELECT * FROM users WHERE LOWER(patient_name) LIKE ? OR patient_id = ?");
+    $search_query_like = "%$search_query%";
+    $stmt->bind_param("ss", $search_query_like, $search_query);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-    foreach ($_SESSION['patients'] as $patient) {
-        if (strpos(strtolower($patient['name']), $search_query) !== false || (string)$patient['id'] === $search_query) {
-            $search_results[] = $patient;
-        }
+    while ($row = $result->fetch_assoc()) {
+        $search_results[] = $row;
     }
-    
+
     if (empty($search_results)) {
-        $no_results = true; // Set the flag to true if no results are found
+        $no_results = true;
     }
+
+    $stmt->close();
 }
 ?>
 
@@ -114,15 +120,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['search_query'])) {
 
     <!-- Display Recorded Symptoms -->
     <h3>Recorded Symptoms</h3>
-    <ul class="list-group">
-        <?php foreach ($_SESSION['symptoms'] as $entry): ?>
+    <?php
+    $result = $conn->query("SELECT * FROM symptoms ORDER BY timestamp DESC");
+    while ($entry = $result->fetch_assoc()):
+    ?>
+        <ul class="list-group">
             <li class="list-group-item">
                 <strong><?php echo $entry['patient_name']; ?></strong> - 
                 <?php echo $entry['symptoms']; ?> 
                 <small class="text-muted">(<?php echo $entry['timestamp']; ?>)</small>
             </li>
-        <?php endforeach; ?>
-    </ul>
+        </ul>
+    <?php endwhile; ?>
 
     <hr>
 
@@ -174,7 +183,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['search_query'])) {
         <ul class="list-group">
             <?php foreach ($search_results as $patient): ?>
                 <li class="list-group-item">
-                    <strong><?php echo $patient['name']; ?></strong> (ID: <?php echo $patient['id']; ?>)<br>
+                    <strong><?php echo $patient['patient_name']; ?></strong> (ID: <?php echo $patient['patient_id']; ?>)<br>
                     <b>Diagnosis:</b> <?php echo $patient['diagnosis']; ?><br>
                     <b>Treatment:</b> <?php echo $patient['treatment']; ?><br>
                     <b>Medications:</b> <?php echo $patient['medications']; ?>
@@ -182,7 +191,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['search_query'])) {
             <?php endforeach; ?>
         </ul>
     <?php endif; ?>
-
 </div>
 </body>
 </html>
+
+<?php
+// Close the database connection
+$conn->close();
+?>
