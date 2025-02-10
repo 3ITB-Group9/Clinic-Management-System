@@ -212,6 +212,59 @@ $appointments = $stmt->get_result();
 
     <button class="logout-btn" onclick="window.location.href='logout.php'">Logout</button>
 
+    <!-- Patient Search -->
+    <div class="card my-4">
+        <div class="card-header bg-info text-white">
+            <h3>Search for a Patient</h3>
+        </div>
+        <div class="card-body">
+            <form method="GET">
+                <div class="form-group">
+                    <input type="text" name="search_query" class="form-control" placeholder="Enter Patient Name or ID">
+                </div>
+                <button type="submit" class="btn btn-info">Search</button>
+            </form>
+        </div>
+    </div>
+
+    <?php
+    // Check if a search query is provided
+    if (isset($_GET['search_query']) && !empty($_GET['search_query'])) {
+        $search_query = "%" . $_GET['search_query'] . "%";
+        
+        // Search for patients by name or ID
+        $search_sql = "SELECT id, name, email FROM users WHERE (id LIKE ? OR name LIKE ?) AND role = 'patient'";
+        $search_stmt = $conn->prepare($search_sql);
+        $search_stmt->bind_param("ss", $search_query, $search_query);
+        $search_stmt->execute();
+        $search_results = $search_stmt->get_result();
+    ?>
+        <div class="card my-4">
+            <div class="card-header bg-warning text-white">
+                <h3>Search Results</h3>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    <?php if ($search_results->num_rows > 0) {
+                        while ($patient = $search_results->fetch_assoc()) { ?>
+                            <li class="list-group-item">
+                                <strong>ID:</strong> <?php echo $patient['id']; ?> 
+                                - <strong>Name:</strong> <?php echo htmlspecialchars($patient['name']); ?> 
+                                - <strong>Email:</strong> <?php echo htmlspecialchars($patient['email']); ?>
+                                - <a href="patient_history.php?patient_id=<?php echo $patient['id']; ?>" class="btn btn-sm btn-info">View History</a>
+                            </li>
+                        <?php }
+                    } else { ?>
+                        <li class="list-group-item text-danger">No results found.</li>
+                    <?php } ?>
+                </ul>
+            </div>
+        </div>
+    <?php
+        $search_stmt->close();
+    }
+    ?>
+
     <!-- Add Medical Record -->
     <div class="card my-4">
         <div class="card-header bg-primary text-white">

@@ -10,6 +10,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
     $contact_number = $_POST['contact_number'];
     $address = $_POST['address'];
+    $age = (int) $_POST['age']; // Get age input
     $role = $_POST['role']; // Role selection (patient/doctor)
 
     // Check if email already exists
@@ -21,9 +22,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($checkStmt->num_rows > 0) {
         $error = "Email already exists! Please use a different email";
     } else {
-        // Insert new user
-        $stmt = $conn->prepare("INSERT INTO users (name, email, password, contact_number, address, role) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("ssssss", $name, $email, $password, $contact_number, $address, $role);
+        // Insert new user with age
+        $stmt = $conn->prepare("INSERT INTO users (name, email, password, contact_number, address, age, role) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssssis", $name, $email, $password, $contact_number, $address, $age, $role);
 
         if ($stmt->execute()) {
             $success = "Registration successful!";
@@ -39,7 +40,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -160,6 +160,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             <div class="mb-3">
                 <textarea name="address" class="form-control" placeholder="Address" required></textarea>
+            </div>
+
+            <div class="mb-3">
+                <input type="number" name="age" class="form-control" placeholder="Age" required>
             </div>
 
             <div class="mb-3">
