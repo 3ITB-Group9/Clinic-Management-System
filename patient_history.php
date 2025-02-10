@@ -14,13 +14,15 @@ if (!$patient_id) {
     exit();
 }
 
-// Fetch patient details
-$patient_query = "SELECT name, email FROM users WHERE id = ? AND role = 'patient'";
+// Fetch patient details with Age and Last Visit Date
+$patient_query = "SELECT name, email, age FROM users WHERE id = ? AND role = 'patient'";   
 $patient_stmt = $conn->prepare($patient_query);
 $patient_stmt->bind_param("i", $patient_id);
 $patient_stmt->execute();
 $patient_result = $patient_stmt->get_result();
 $patient = $patient_result->fetch_assoc();
+
+
 
 // Fetch medical history
 $history_query = "SELECT description, date_added FROM medical_history WHERE patient_id = ? ORDER BY date_added DESC";
@@ -67,6 +69,11 @@ $history_result = $history_stmt->get_result();
     <h3 class="text-center">Medical History</h3>
     <p><strong>Patient Name:</strong> <?php echo htmlspecialchars($patient['name']); ?></p>
     <p><strong>Email:</strong> <?php echo htmlspecialchars($patient['email']); ?></p>
+    <p><strong>Age:</strong> <?php echo isset($patient['age']) ? htmlspecialchars($patient['age']) . " years" : "Not available"; ?></p>
+
+    
+
+    
     <a href="doctor_dashboard.php" class="btn btn-secondary btn-sm mb-3">Back to Dashboard</a>
 
     <div class="card">
