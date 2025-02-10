@@ -9,19 +9,39 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
     $password = $_POST['password'];
 
-    // Prepare SQL statement
-    $stmt = $conn->prepare("SELECT id, password FROM patients WHERE email = ?");
+    // Prepare SQL statement for users table
+    $stmt = $conn->prepare("SELECT id, name, password, role FROM users WHERE email = ?");
+    if ($stmt === false) {
+        die("Error in SQL query: " . $conn->error);
+    }
+
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $stmt->store_result();
-    $stmt->bind_result($id, $hashed_password);
+
+    // Bind the correct number of variables (MUST match the SELECT statement)
+    $stmt->bind_result($id, $name, $hashed_password, $role);
 
     // Verify login
-    if ($stmt->fetch() && password_verify($password, $hashed_password)) {
-        session_regenerate_id(true); // Prevent session fixation
-        $_SESSION['patient_id'] = $id;
-        header("Location: index.php");
-        exit();
+    if ($stmt->fetch()) {
+        if (password_verify($password, $hashed_password)) {
+            session_regenerate_id(true); // Prevent session fixation
+            $_SESSION['user_id'] = $id;
+            $_SESSION['name'] = $name;
+            $_SESSION['role'] = $role;
+
+            // Redirect based on role
+            if ($role === 'patient') {
+                header("Location: patient_dashboard.php");
+            } elseif ($role === 'doctor') {
+                header("Location: doctor_dashboard.php");
+            } else {
+                $error = "Unauthorized role detected.";
+            }
+            exit();
+        } else {
+            $error = "Invalid email or password.";
+        }
     } else {
         $error = "Invalid email or password.";
     }
