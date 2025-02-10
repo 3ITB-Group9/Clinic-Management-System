@@ -44,7 +44,7 @@ $stmt->execute();
 $medications = $stmt->get_result();
 
 // Fetch appointments
-$query = "SELECT appointment_date, reason, status 
+$query = "SELECT appointment_date, reason, status, doctor_id
           FROM appointments
           WHERE patient_id = ? ORDER BY appointment_date DESC";
 $stmt = $conn->prepare($query);
@@ -60,61 +60,95 @@ $appointments = $stmt->get_result();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Patient Dashboard</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css"> <!-- Your custom styles -->
 </head>
+
 <style>
-    /* Custom styling for logout button */
-    .logout-btn {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        font-size: 16px;
-        background-color: #dc3545;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        cursor: pointer;
+    body {
+        background-color: #f4f7fc;
     }
 
-    .logout-btn:hover {
-        background-color: #c82333;
+    .sidebar {
+        width: 250px;
+        height: 100vh;
+        background:rgb(22, 98, 228);
+        position: fixed;
+        top: 0;
+        left: 0;
+        padding: 20px;
+        color: white;
+    }
+
+    .sidebar a {
+        display: block;
+        color: white;
+        padding: 10px;
+        text-decoration: none;
+        margin-bottom: 10px;
+    }
+
+    .sidebar a:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 5px;
+    }
+
+    .content {
+        margin-left: 270px;
+        padding: 20px;
+    }
+
+    .card {
+        border-radius: 15px;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
     }
 </style>
 
 <body>
-    <div class="container mt-5">
-        <button class="logout-btn" onclick="window.location.href='logout.php'">Logout</button>
 
-        <h2 class="text-center">Welcome, <?php echo htmlspecialchars($_SESSION['name'] ?? 'User'); ?></h2>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h3>Patient Panel</h3>
+        <a href="#"><i class="fas fa-home"></i> Dashboard</a>
+        <a href="#"><i class="fas fa-user-md"></i> Doctors</a>
+        <a href="#"><i class="fas fa-file-medical"></i> Medical History</a>
+        <a href="#"><i class="fas fa-pills"></i> Medications</a>
+        <a href="#"><i class="fas fa-calendar-check"></i> Appointments</a>
+        <a href="logout.php" class="btn btn-danger w-100 mt-3"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
 
+    <div class="content">
+        <h2 class="text-center mb-4">Welcome, <?php echo htmlspecialchars($_SESSION['name'] ?? 'User'); ?></h2>
+
+        <!-- Medical History -->
         <div class="card my-4">
-            <div class="card-header">
-                <h3>Medical History</h3>
+            <div class="card-header bg-primary text-white">
+                <h4><i class="fas fa-notes-medical"></i> Medical History</h4>
             </div>
             <div class="card-body">
                 <ul class="list-group">
                     <?php while ($row = $medical_history->fetch_assoc()) { ?>
                         <li class="list-group-item">
                             <strong>Doctor:</strong> <?php echo $row['doctor_name']; ?> - <?php echo $row['description']; ?>
-                            <span class="badge badge-info float-right"><?php echo $row['date_added']; ?></span>
+                            <span class="badge bg-info float-end"><?php echo $row['date_added']; ?></span>
                         </li>
                     <?php } ?>
                 </ul>
             </div>
         </div>
 
+        <!-- Diagnoses -->
         <div class="card my-4">
-            <div class="card-header">
-                <h3>Diagnoses</h3>
+            <div class="card-header bg-warning text-white">
+                <h4><i class="fas fa-stethoscope"></i> Diagnoses</h4>
             </div>
             <div class="card-body">
                 <ul class="list-group">
                     <?php while ($row = $diagnoses->fetch_assoc()) { ?>
                         <li class="list-group-item">
                             <strong>Diagnosis:</strong> <?php echo $row['diagnosis']; ?>
-                            <span class="badge badge-warning float-right"><?php echo $row['date_diagnosed']; ?></span>
+                            <span class="badge bg-warning float-end"><?php echo $row['date_diagnosed']; ?></span>
                             <br><strong>Doctor:</strong> <?php echo $row['doctor_name']; ?>
                         </li>
                     <?php } ?>
@@ -122,9 +156,10 @@ $appointments = $stmt->get_result();
             </div>
         </div>
 
+        <!-- Medications -->
         <div class="card my-4">
-            <div class="card-header">
-                <h3>Medications</h3>
+            <div class="card-header bg-success text-white">
+                <h4><i class="fas fa-pills"></i> Medications</h4>
             </div>
             <div class="card-body">
                 <ul class="list-group">
@@ -132,7 +167,7 @@ $appointments = $stmt->get_result();
                         <li class="list-group-item">
                             <strong>Medication:</strong> <?php echo $row['medication_name']; ?>, <?php echo $row['dosage']; ?>
                             <br><strong>Instructions:</strong> <?php echo $row['instructions']; ?>
-                            <span class="badge badge-success float-right"><?php echo $row['prescribed_date']; ?></span>
+                            <span class="badge bg-success float-end"><?php echo $row['prescribed_date']; ?></span>
                             <br><strong>Doctor:</strong> <?php echo $row['doctor_name']; ?>
                         </li>
                     <?php } ?>
@@ -140,29 +175,34 @@ $appointments = $stmt->get_result();
             </div>
         </div>
 
+        <!-- Appointments -->
         <div class="card my-4">
-            <div class="card-header">
-                <h3>Your Appointments</h3>
+            <div class="card-header bg-danger text-white">
+                <h4><i class="fas fa-calendar-alt"></i> Your Appointments</h4>
             </div>
             <div class="card-body">
-                <ul class="list-group">
-                    <?php while ($row = $appointments->fetch_assoc()) { ?>
-                        <li class="list-group-item">
-                            <strong>Appointment Date:</strong> <?php echo $row['appointment_date']; ?>
-                            - <strong>Status:</strong> <?php echo $row['status']; ?>
-                            - <strong>Doctor:</strong> <?php echo $row['doctor_id']; ?> <!-- You can fetch doctor details if needed -->
-                        </li>
-                    <?php } ?>
-                </ul>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php while ($row = $appointments->fetch_assoc()) { ?>
+                            <tr>
+                                <td><?php echo $row['appointment_date']; ?></td>
+                                <td><?php echo $row['reason']; ?></td>
+                                <td><?php echo $row['status']; ?></td>
+                            </tr>
+                        <?php } ?>
+                    </tbody>
+                </table>
             </div>
         </div>
-
     </div>
 
-    <!-- Bootstrap JS and dependencies -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 
 </html>
