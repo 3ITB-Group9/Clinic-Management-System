@@ -20,39 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_medical_record']))
     $stmt->close();
 }
 
-// Handle adding a diagnosis and creating an appointment
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_diagnosis'])) {
-    $patient_id = $_POST['patient_id'];
-    $diagnosis = $_POST['diagnosis'];
-    $appointment_date = $_POST['appointment_date'];
-    $query = "INSERT INTO diagnoses (patient_id, doctor_id, diagnosis) VALUES (?, ?, ?)";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("iis", $patient_id, $doctor_id, $diagnosis);
-    $stmt->execute();
-    $stmt->close();
-    
-    $appointment_query = "INSERT INTO appointments (patient_id, doctor_id, appointment_date, status) VALUES (?, ?, ?, 'Scheduled')";
-    $appointment_stmt = $conn->prepare($appointment_query);
-    $appointment_stmt->bind_param("iis", $patient_id, $doctor_id, $appointment_date);
-    $appointment_stmt->execute();
-    $appointment_stmt->close();
-    header("Location: doctor_dashboard.php");
-    exit();
-}
-
-// Handle adding a medication
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_medication'])) {
-    $patient_id = $_POST['patient_id'];
-    $medication_name = $_POST['medication_name'];
-    $dosage = $_POST['dosage'];
-    $instructions = $_POST['instructions'];
-    $query = "INSERT INTO medications (patient_id, doctor_id, medication_name, dosage, instructions) VALUES (?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("iisss", $patient_id, $doctor_id, $medication_name, $dosage, $instructions);
-    $stmt->execute();
-    $stmt->close();
-}
-
 // Fetch appointments
 $query = "SELECT appointment_date, reason, status, p.name AS patient_name 
           FROM appointments app
@@ -116,7 +83,6 @@ $appointments = $stmt->get_result();
         .logout-btn:hover {
             background-color: #c82333;
         }
-        
     </style>
 </head>
 
@@ -136,8 +102,60 @@ $appointments = $stmt->get_result();
 
     <button class="logout-btn" onclick="window.location.href='logout.php'">Logout</button>
 
-    <!-- Add Medical Record -->
+    <!-- Patient Search -->
     <div class="card my-4">
+        <div class="card-header bg-info text-white">
+            <h3>Search for a Patient</h3>
+        </div>
+        <div class="card-body">
+            <form method="GET">
+                <div class="form-group">
+                    <input type="text" name="search_query" class="form-control" placeholder="Enter Patient Name or ID">
+                </div>
+                <button type="submit" class="btn btn-info">Search</button>
+            </form>
+        </div>
+    </div>
+
+    <?php
+    // Check if a search query is provided
+    if (isset($_GET['search_query']) && !empty($_GET['search_query'])) {
+        $search_query = "%" . $_GET['search_query'] . "%";
+        
+        // Search for patients by name or ID
+        $search_sql = "SELECT id, name, email FROM users WHERE (id LIKE ? OR name LIKE ?) AND role = 'patient'";
+        $search_stmt = $conn->prepare($search_sql);
+        $search_stmt->bind_param("ss", $search_query, $search_query);
+        $search_stmt->execute();
+        $search_results = $search_stmt->get_result();
+    ?>
+        <div class="card my-4">
+            <div class="card-header bg-warning text-white">
+                <h3>Search Results</h3>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    <?php if ($search_results->num_rows > 0) {
+                        while ($patient = $search_results->fetch_assoc()) { ?>
+                            <li class="list-group-item">
+                                <strong>ID:</strong> <?php echo $patient['id']; ?> 
+                                - <strong>Name:</strong> <?php echo htmlspecialchars($patient['name']); ?> 
+                                - <strong>Email:</strong> <?php echo htmlspecialchars($patient['email']); ?>
+                                - <a href="patient_history.php?patient_id=<?php echo $patient['id']; ?>" class="btn btn-sm btn-info">View History</a>
+                            </li>
+                        <?php }
+                    } else { ?>
+                        <li class="list-group-item text-danger">No results found.</li>
+                    <?php } ?>
+                </ul>
+            </div>
+        </div>
+    <?php
+        $search_stmt->close();
+    }
+    ?>
+  <!-- Add Medical Record -->
+  <div class="card my-4">
         <div class="card-header bg-primary text-white">
             <h3>Add Medical Record</h3>
         </div>
@@ -199,8 +217,6 @@ $appointments = $stmt->get_result();
         </form>
     </div>
 </div>
-
-
     <!-- Appointments List -->
     <div class="card my-4">
         <div class="card-header bg-dark text-white">
@@ -220,5 +236,6 @@ $appointments = $stmt->get_result();
         </div>
     </div>
 </div>
+
 </body>
 </html>
