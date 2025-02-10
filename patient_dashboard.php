@@ -13,6 +13,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'patient') {
 
 $patient_id = $_SESSION['user_id'];
 
+// Fetch patient details
+$query = "SELECT name, contact_number, address FROM users WHERE id = ?";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $patient_id);
+$stmt->execute();
+$patient_details = $stmt->get_result()->fetch_assoc();
+
 // Fetch medical history
 $query = "SELECT mh.description, mh.date_added, d.name AS doctor_name 
           FROM medical_history mh
@@ -24,7 +31,7 @@ $stmt->execute();
 $medical_history = $stmt->get_result();
 
 // Fetch diagnoses
-$query = "SELECT dgn.diagnosis, dgn.date_diagnosed, d.name AS doctor_name 
+$query = "SELECT dgn.diagnosis, dgn.date_diagnosed, dgn.heart_rate, dgn.blood_pressure, dgn.height, dgn.weight, d.name AS doctor_name 
           FROM diagnoses dgn
           JOIN users d ON dgn.doctor_id = d.id
           WHERE dgn.patient_id = ? ORDER BY dgn.date_diagnosed DESC";
@@ -44,7 +51,7 @@ $stmt->execute();
 $medications = $stmt->get_result();
 
 // Fetch appointments
-$query = "SELECT appointment_date, reason, status, doctor_id
+$query = "SELECT appointment_date, status, doctor_id
           FROM appointments
           WHERE patient_id = ? ORDER BY appointment_date DESC";
 $stmt = $conn->prepare($query);
@@ -73,7 +80,7 @@ $appointments = $stmt->get_result();
     .sidebar {
         width: 250px;
         height: 100vh;
-        background:rgb(22, 98, 228);
+        background: rgb(22, 98, 228);
         position: fixed;
         top: 0;
         left: 0;
@@ -121,6 +128,18 @@ $appointments = $stmt->get_result();
     <div class="content">
         <h2 class="text-center mb-4">Welcome, <?php echo htmlspecialchars($_SESSION['name'] ?? 'User'); ?></h2>
 
+        <!-- Patient Details -->
+        <div class="card my-4">
+            <div class="card-header bg-info text-white">
+                <h4><i class="fas fa-user"></i> Patient Details</h4>
+            </div>
+            <div class="card-body">
+                <p><strong>Name:</strong> <?php echo $patient_details['name']; ?></p>
+                <p><strong>Contact:</strong> <?php echo $patient_details['contact_number']; ?></p>
+                <p><strong>Address:</strong> <?php echo $patient_details['address']; ?></p>
+            </div>
+        </div>
+
         <!-- Medical History -->
         <div class="card my-4">
             <div class="card-header bg-primary text-white">
@@ -150,6 +169,10 @@ $appointments = $stmt->get_result();
                             <strong>Diagnosis:</strong> <?php echo $row['diagnosis']; ?>
                             <span class="badge bg-warning float-end"><?php echo $row['date_diagnosed']; ?></span>
                             <br><strong>Doctor:</strong> <?php echo $row['doctor_name']; ?>
+                            <br><strong>Heart Rate:</strong> <?php echo $row['heart_rate']; ?> bpm
+                            <br><strong>Blood Pressure:</strong> <?php echo $row['blood_pressure']; ?>
+                            <br><strong>Height:</strong> <?php echo $row['height']; ?> cm
+                            <br><strong>Weight:</strong> <?php echo $row['weight']; ?> kg
                         </li>
                     <?php } ?>
                 </ul>
@@ -165,7 +188,8 @@ $appointments = $stmt->get_result();
                 <ul class="list-group">
                     <?php while ($row = $medications->fetch_assoc()) { ?>
                         <li class="list-group-item">
-                            <strong>Medication:</strong> <?php echo $row['medication_name']; ?>, <?php echo $row['dosage']; ?>
+                            <strong>Medication:</strong> <?php echo $row['medication_name']; ?>
+                            <br><strong>Dosage:</strong> <?php echo $row['dosage']; ?>
                             <br><strong>Instructions:</strong> <?php echo $row['instructions']; ?>
                             <span class="badge bg-success float-end"><?php echo $row['prescribed_date']; ?></span>
                             <br><strong>Doctor:</strong> <?php echo $row['doctor_name']; ?>
@@ -185,16 +209,23 @@ $appointments = $stmt->get_result();
                     <thead>
                         <tr>
                             <th>Date</th>
-                            <th>Reason</th>
                             <th>Status</th>
+                            <th>Doctor</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php while ($row = $appointments->fetch_assoc()) { ?>
+                        <?php while ($row = $appointments->fetch_assoc()) { 
+                            // Get doctor's name for each appointment
+                            $doctor_query = "SELECT name FROM users WHERE id = ?";
+                            $stmt = $conn->prepare($doctor_query);
+                            $stmt->bind_param("i", $row['doctor_id']);
+                            $stmt->execute();
+                            $doctor_result = $stmt->get_result()->fetch_assoc();
+                        ?>
                             <tr>
                                 <td><?php echo $row['appointment_date']; ?></td>
-                                <td><?php echo $row['reason']; ?></td>
                                 <td><?php echo $row['status']; ?></td>
+                                <td><?php echo $doctor_result['name']; ?></td>
                             </tr>
                         <?php } ?>
                     </tbody>
