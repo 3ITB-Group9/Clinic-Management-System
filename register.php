@@ -167,7 +167,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
 
             <div class="mb-3">
-                <select name="role" class="form-control" required>
+                <select name="role" class="form-control" required hidden>
                     <option value="patient">Patient</option>
                     <option value="doctor">Doctor</option>
                 </select>
