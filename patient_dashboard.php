@@ -118,10 +118,10 @@ $appointments = $stmt->get_result();
     <div class="sidebar">
         <h3>Patient Panel</h3>
         <a href="#"><i class="fas fa-home"></i> Dashboard</a>
-        <a href="#"><i class="fas fa-user-md"></i> Doctors</a>
-        <a href="#"><i class="fas fa-file-medical"></i> Medical History</a>
-        <a href="#"><i class="fas fa-pills"></i> Medications</a>
-        <a href="#"><i class="fas fa-calendar-check"></i> Appointments</a>
+        <a href="#medHisory"><i class="fas fa-file-medical"></i> Medical History</a>
+        <a href="#diagnoses"><i class="fas fa-file-medical"></i> Diagnoses</a>
+        <a href="#medications"><i class="fas fa-pills"></i> Medications</a>
+        <a href="#appoints"><i class="fas fa-calendar-check"></i> Appointments</a>
         <a href="logout.php" class="btn btn-danger w-100 mt-3"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 
@@ -141,7 +141,7 @@ $appointments = $stmt->get_result();
         </div>
 
         <!-- Medical History -->
-        <div class="card my-4">
+        <div class="card my-4" id="medHisory">
             <div class="card-header bg-primary text-white">
                 <h4><i class="fas fa-notes-medical"></i> Medical History</h4>
             </div>
@@ -158,7 +158,7 @@ $appointments = $stmt->get_result();
         </div>
 
         <!-- Diagnoses -->
-        <div class="card my-4">
+        <div class="card my-4" id="diagnoses">
             <div class="card-header bg-warning text-white">
                 <h4><i class="fas fa-stethoscope"></i> Diagnoses</h4>
             </div>
@@ -180,7 +180,7 @@ $appointments = $stmt->get_result();
         </div>
 
         <!-- Medications -->
-        <div class="card my-4">
+        <div class="card my-4" id="medications">
             <div class="card-header bg-success text-white">
                 <h4><i class="fas fa-pills"></i> Medications</h4>
             </div>
@@ -200,7 +200,7 @@ $appointments = $stmt->get_result();
         </div>
 
         <!-- Appointments -->
-        <div class="card my-4">
+        <div class="card my-4" id="appoints">
             <div class="card-header bg-danger text-white">
                 <h4><i class="fas fa-calendar-alt"></i> Your Appointments</h4>
             </div>
@@ -214,7 +214,7 @@ $appointments = $stmt->get_result();
                         </tr>
                     </thead>
                     <tbody>
-                        <?php while ($row = $appointments->fetch_assoc()) { 
+                        <?php while ($row = $appointments->fetch_assoc()) {
                             // Get doctor's name for each appointment
                             $doctor_query = "SELECT name FROM users WHERE id = ?";
                             $stmt = $conn->prepare($doctor_query);
